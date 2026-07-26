@@ -5,6 +5,7 @@ import {
   apiAdminLogin, clearAdminToken,
   apiAdminGetMarkets, apiAdminCreateMarket, apiAdminUpdateMarket,
   apiAdminDeleteMarket, apiAdminToggleMarket, apiAdminResolveMarket,
+  apiAdminFeatureMarket, apiAdminGetFeaturedMarkets,
   ApiMarket, SettlementBreakdown,
 } from "./api";
 
@@ -35,6 +36,8 @@ function toMarket(m: ApiMarket): Market {
     priceAssetId:     m.priceAssetId ?? null,
     priceAssetSymbol: m.priceAssetSymbol ?? null,
     openingPrice:     m.openingPrice ?? null,
+    featured:         m.featured ?? false,
+    featuredOrder:    m.featuredOrder ?? null,
   };
 }
 
@@ -64,6 +67,7 @@ interface AdminState {
   }) => Promise<Result>;
   deleteMarket: (id: number) => Promise<Result>;
   toggleMarketStatus: (id: number) => Promise<Result>;
+  featureMarket: (id: number, featured: boolean, featuredOrder?: number) => Promise<Result>;
   resolveMarket: (id: number, result: string | Record<string, "Yes" | "No">) => Promise<
     { ok: true; settlement: SettlementBreakdown } | { ok: false; error: string }
   >;
@@ -156,6 +160,13 @@ export const useStore = create<AdminState>()(
       toggleMarketStatus: async (id) => {
         const res = await apiAdminToggleMarket(id);
         if (!res.ok || !res.data) return { ok: false, error: res.error ?? "Failed to toggle market status." };
+        set((state) => ({ markets: state.markets.map((m) => m.id === id ? toMarket(res.data!) : m) }));
+        return { ok: true };
+      },
+
+      featureMarket: async (id, featured, featuredOrder) => {
+        const res = await apiAdminFeatureMarket(id, featured, featuredOrder);
+        if (!res.ok || !res.data) return { ok: false, error: res.error ?? "Failed to update feature status." };
         set((state) => ({ markets: state.markets.map((m) => m.id === id ? toMarket(res.data!) : m) }));
         return { ok: true };
       },

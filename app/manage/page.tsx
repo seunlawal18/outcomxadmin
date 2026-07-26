@@ -5,13 +5,190 @@ import { Market, MarketCategory, DURATION_LABELS } from "@/lib/types";
 import {
   Pencil, Trash2, Power, PowerOff, Search, X, Save,
   ListFilter, Clock, CheckCircle2, XCircle, ImagePlus,
-  RefreshCw, AlertCircle,
+  RefreshCw, AlertCircle, Star, Layout,
 } from "lucide-react";
 import Countdown from "@/components/Countdown";
 import { toast } from "@/lib/toastStore";
 
+// ── Featured Slots Summary Panel ──────────────────────────────────
+function FeaturedSlotsPanel({
+  markets,
+  onRemove,
+}: {
+  markets: Market[];
+  onRemove: (m: Market) => void;
+}) {
+  const featured = markets
+    .filter(m => m.featured)
+    .sort((a, b) => (a.featuredOrder ?? 99) - (b.featuredOrder ?? 99));
+
+  return (
+    <div className="card" style={{ marginBottom: 20, padding: "16px 20px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+        <Layout size={15} color="#f59e0b" />
+        <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>Homepage Hero Slots</span>
+        <span style={{ fontSize: 11, color: "var(--text-muted)", marginLeft: 4 }}>
+          {featured.length}/5 occupied
+        </span>
+      </div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        {[1, 2, 3, 4, 5].map(slot => {
+          const m = featured.find(f => f.featuredOrder === slot);
+          return (
+            <div key={slot} style={{
+              flex: "1 1 160px", minWidth: 140,
+              padding: "10px 12px", borderRadius: 10,
+              border: `1px solid ${m ? "#f59e0b55" : "var(--border)"}`,
+              background: m ? "#f59e0b0d" : "var(--bg-card-hover)",
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: m ? "#f59e0b" : "var(--text-muted)" }}>
+                  Slot {slot}
+                </span>
+                {m && (
+                  <button
+                    onClick={() => onRemove(m)}
+                    title="Remove from hero"
+                    style={{ background: "none", border: "none", color: "var(--red)", cursor: "pointer", fontSize: 11, fontWeight: 700, padding: "1px 5px", borderRadius: 4 }}
+                    onMouseEnter={e => (e.currentTarget.style.background = "var(--red-bg)")}
+                    onMouseLeave={e => (e.currentTarget.style.background = "none")}
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+              {m ? (
+                <p style={{ fontSize: 12, color: "var(--text-primary)", margin: 0, lineHeight: 1.3 }}>
+                  {m.title.length > 40 ? m.title.slice(0, 40) + "…" : m.title}
+                </p>
+              ) : (
+                <p style={{ fontSize: 12, color: "var(--text-muted)", margin: 0 }}>Empty</p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Hero Slot Editor (shown inside edit row) ──────────────────────
+function HeroSlotEditor({
+  market,
+  allMarkets,
+  onSave,
+}: {
+  market: Market;
+  allMarkets: Market[];
+  onSave: (featured: boolean, order: number) => Promise<void>;
+}) {
+  const [featured, setFeatured] = useState(market.featured ?? false);
+  const [order, setOrder]       = useState(market.featuredOrder ?? 1);
+  const [saving, setSaving]     = useState(false);
+
+  const handleSave = async () => {
+    if (featured) {
+      // Check if slot is taken by another market
+      const conflict = allMarkets.find(
+        m => m.id !== market.id && m.featured && m.featuredOrder === order
+      );
+      if (conflict) {
+        const title = conflict.title.length > 40 ? conflict.title.slice(0, 40) + "…" : conflict.title;
+        if (!window.confirm(`Slot ${order} is already used by "${title}". Replace it?`)) return;
+      }
+    }
+    setSaving(true);
+    await onSave(featured, order);
+    setSaving(false);
+  };
+
+  return (
+    <div style={{
+      marginTop: 14, padding: "14px 16px", borderRadius: 10,
+      background: "var(--bg-primary)", border: "1px solid var(--border)",
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+        <Star size={13} color="#f59e0b" fill={featured ? "#f59e0b" : "none"} />
+        <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)", textTransform: "uppercase", letterSpacing: "0.4px" }}>
+          Homepage Hero Slot
+        </span>
+      </div>
+
+      {/* Checkbox */}
+      <label style={{ display: "flex", alignItems: "center", gap: 9, cursor: "pointer", marginBottom: 12 }}>
+        <input
+          type="checkbox"
+          checked={featured}
+          onChange={e => setFeatured(e.target.checked)}
+          style={{ width: 15, height: 15, accentColor: "#f59e0b", cursor: "pointer" }}
+        />
+        <span style={{ fontSize: 13, color: "var(--text-primary)" }}>
+          Feature this market on the homepage hero banner
+        </span>
+      </label>
+
+      {/* Slot picker — only shown when checked */}
+      {featured && (
+        <div style={{ marginBottom: 12 }}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.4px", marginBottom: 8 }}>
+            Slot position
+          </p>
+          <div style={{ display: "flex", gap: 6 }}>
+            {[1, 2, 3, 4, 5].map(n => {
+              const takenBy = allMarkets.find(m => m.id !== market.id && m.featured && m.featuredOrder === n);
+              return (
+                <button
+                  key={n}
+                  onClick={() => setOrder(n)}
+                  title={takenBy ? `Currently: ${takenBy.title.slice(0, 30)}…` : `Slot ${n} (empty)`}
+                  style={{
+                    width: 36, height: 36, borderRadius: 8, fontSize: 13, fontWeight: 700,
+                    cursor: "pointer", border: "1px solid", transition: "all 0.15s",
+                    position: "relative",
+                    borderColor: order === n ? "#f59e0b" : "var(--border)",
+                    background: order === n ? "#f59e0b22" : "var(--bg-card-hover)",
+                    color: order === n ? "#f59e0b" : takenBy ? "#ef4444" : "var(--text-secondary)",
+                  }}
+                >
+                  {n}
+                  {takenBy && (
+                    <span style={{
+                      position: "absolute", top: -4, right: -4,
+                      width: 8, height: 8, borderRadius: "50%",
+                      background: "#ef4444", border: "2px solid var(--bg-secondary)",
+                    }} />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 6 }}>
+            Red dot = slot already occupied by another market
+          </p>
+        </div>
+      )}
+
+      <button
+        onClick={handleSave}
+        disabled={saving}
+        style={{
+          display: "flex", alignItems: "center", gap: 6,
+          padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600,
+          background: "#f59e0b", border: "none", color: "#000",
+          cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1,
+          transition: "opacity 0.15s",
+        }}
+      >
+        <Star size={13} fill="#000" />
+        {saving ? "Saving…" : "Save Hero Settings"}
+      </button>
+    </div>
+  );
+}
+
+// ── Main Page ─────────────────────────────────────────────────────
 export default function ManageMarketsPage() {
-  const { markets, updateMarket, deleteMarket, toggleMarketStatus, fetchMarkets } = useStore();
+  const { markets, updateMarket, deleteMarket, toggleMarketStatus, fetchMarkets, featureMarket } = useStore();
   const [search, setSearch]               = useState("");
   const [editingId, setEditingId]         = useState<number | null>(null);
   const [editTitle, setEditTitle]         = useState("");
@@ -23,11 +200,7 @@ export default function ManageMarketsPage() {
   const [refreshing, setRefreshing]       = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch ALL markets on mount so admin sees everything including new ones
-  useEffect(() => {
-    handleRefresh();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useEffect(() => { handleRefresh(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
 
   const filtered = markets.filter(m => {
     const matchSearch = m.title.toLowerCase().includes(search.toLowerCase());
@@ -45,33 +218,22 @@ export default function ManageMarketsPage() {
   const saveEdit = async () => {
     if (!editingId) return;
     const res = await updateMarket(editingId, { title: editTitle, category: editCategory, image: editImage || undefined });
-    if (res.ok) {
-      setEditingId(null);
-      toast("Market updated");
-    } else {
-      toast(res.error, "error");
-    }
+    if (res.ok) { setEditingId(null); toast("Market updated"); }
+    else toast(res.error, "error");
   };
 
   const handleDelete = async (id: number) => {
     setActionError("");
     const res = await deleteMarket(id);
     setConfirmDelete(null);
-    if (res.ok) {
-      toast("Market deleted");
-    } else {
-      setActionError(res.error);
-      toast(res.error, "error");
-    }
+    if (res.ok) toast("Market deleted");
+    else { setActionError(res.error); toast(res.error, "error"); }
   };
 
   const handleToggle = async (m: Market) => {
     const res = await toggleMarketStatus(m.id);
-    if (res.ok) {
-      toast(m.status === "open" ? "Market closed" : "Market opened");
-    } else {
-      toast(res.error, "error");
-    }
+    if (res.ok) toast(m.status === "open" ? "Market closed" : "Market opened");
+    else toast(res.error, "error");
   };
 
   const handleRefresh = async () => {
@@ -79,6 +241,21 @@ export default function ManageMarketsPage() {
     const res = await fetchMarkets();
     if (!res.ok) setActionError(res.error);
     setRefreshing(false);
+  };
+
+  const handleFeatureSave = async (market: Market, featured: boolean, order: number) => {
+    const res = await featureMarket(market.id, featured, featured ? order : undefined);
+    if (res.ok) {
+      toast(featured ? `Slot ${order} — "${market.title.slice(0, 30)}" featured ⭐` : "Removed from hero banner");
+    } else {
+      toast(res.error, "error");
+    }
+  };
+
+  const handleRemoveFeature = async (m: Market) => {
+    const res = await featureMarket(m.id, false);
+    if (res.ok) toast("Removed from hero banner");
+    else toast(res.error, "error");
   };
 
   const handleImageFile = (file: File) => {
@@ -107,7 +284,6 @@ export default function ManageMarketsPage() {
         </div>
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-          {/* Refresh button */}
           <button onClick={handleRefresh} disabled={refreshing} style={{
             display: "flex", alignItems: "center", gap: 6,
             padding: "7px 14px", borderRadius: 8, fontSize: 13, fontWeight: 600,
@@ -119,7 +295,6 @@ export default function ManageMarketsPage() {
             {refreshing ? "Refreshing…" : "Refresh"}
           </button>
 
-          {/* Status filter */}
           <div style={{ display: "flex", gap: 6 }}>
             {(["all","open","closed","settled"] as const).map(s => (
               <button key={s} onClick={() => setStatusFilter(s)} style={{
@@ -129,13 +304,10 @@ export default function ManageMarketsPage() {
                 background: statusFilter === s ? (s === "all" ? "var(--emerald-bg)" : `${statusColors[s] || "#10b981"}18`) : "var(--bg-card-hover)",
                 color: statusFilter === s ? (s === "all" ? "var(--emerald)" : statusColors[s] || "var(--emerald)") : "var(--text-secondary)",
                 textTransform: "capitalize", transition: "all 0.15s",
-              }}>
-                {s}
-              </button>
+              }}>{s}</button>
             ))}
           </div>
 
-          {/* Search */}
           <div style={{ position: "relative" }}>
             <Search size={14} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
             <input className="input-dark" placeholder="Search markets..." value={search}
@@ -153,6 +325,10 @@ export default function ManageMarketsPage() {
         </div>
       )}
 
+      {/* Featured Slots Panel */}
+      <FeaturedSlotsPanel markets={markets} onRemove={handleRemoveFeature} />
+
+      {/* Markets table */}
       <div className="card" style={{ overflow: "hidden", padding: 0 }}>
         {/* Table header */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 90px 70px 80px 100px 140px", padding: "11px 18px", borderBottom: "1px solid var(--border)", background: "var(--bg-primary)" }}>
@@ -162,13 +338,12 @@ export default function ManageMarketsPage() {
         </div>
 
         {filtered.length === 0 ? (
-          <div style={{ padding: "40px 20px", textAlign: "center", color: "var(--text-secondary)" }}>
-            No markets found
-          </div>
+          <div style={{ padding: "40px 20px", textAlign: "center", color: "var(--text-secondary)" }}>No markets found</div>
         ) : (
           filtered.map(m => (
             <div key={m.id}>
               {editingId === m.id ? (
+                /* ── Edit row ── */
                 <div style={{ padding: "16px 18px", borderBottom: "1px solid var(--border)", background: "var(--emerald-bg)", display: "flex", flexDirection: "column", gap: 14 }}>
                   <textarea className="input-dark" value={editTitle} onChange={e => setEditTitle(e.target.value)}
                     rows={2} style={{ fontSize: 14, resize: "vertical", fontFamily: "inherit", minHeight: 52 }} placeholder="Market title" />
@@ -202,6 +377,13 @@ export default function ManageMarketsPage() {
                     ))}
                   </div>
 
+                  {/* Hero Slot Editor */}
+                  <HeroSlotEditor
+                    market={m}
+                    allMarkets={markets}
+                    onSave={(featured, order) => handleFeatureSave(m, featured, order)}
+                  />
+
                   <div style={{ display: "flex", gap: 8 }}>
                     <button onClick={saveEdit} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", borderRadius: 8, background: "var(--emerald)", border: "none", color: "white", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
                       <Save size={13} /> Save Changes
@@ -212,11 +394,13 @@ export default function ManageMarketsPage() {
                   </div>
                 </div>
               ) : (
+                /* ── Normal row ── */
                 <div
                   style={{ display: "grid", gridTemplateColumns: "1fr 90px 70px 80px 100px 140px", padding: "12px 18px", borderBottom: "1px solid var(--border)", alignItems: "center", transition: "background 0.15s" }}
                   onMouseEnter={e => (e.currentTarget.style.background = "var(--bg-card-hover)")}
                   onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
                 >
+                  {/* Title + image + featured star */}
                   <div style={{ paddingRight: 12, display: "flex", alignItems: "center", gap: 10 }}>
                     {m.image ? (
                       <img src={m.image} alt="" style={{ width: 36, height: 36, borderRadius: 7, objectFit: "cover", border: "1px solid var(--border)", flexShrink: 0 }} />
@@ -224,12 +408,24 @@ export default function ManageMarketsPage() {
                       <div style={{ width: 36, height: 36, borderRadius: 7, background: "var(--bg-card-hover)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 16 }}>📊</div>
                     )}
                     <div>
-                      <span style={{ fontSize: 13, color: "var(--text-primary)", display: "block" }}>
-                        {m.title.length > 44 ? m.title.slice(0, 44) + "…" : m.title}
-                      </span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                        <span style={{ fontSize: 13, color: "var(--text-primary)" }}>
+                          {m.title.length > 44 ? m.title.slice(0, 44) + "…" : m.title}
+                        </span>
+                        {m.featured && (
+                          <span
+                            title={`Featured — Slot ${m.featuredOrder}`}
+                            style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "1px 6px", borderRadius: 20, background: "#f59e0b22", border: "1px solid #f59e0b55", fontSize: 10, fontWeight: 700, color: "#f59e0b", flexShrink: 0 }}
+                          >
+                            <Star size={9} fill="#f59e0b" color="#f59e0b" />
+                            {m.featuredOrder}
+                          </span>
+                        )}
+                      </div>
                       {m.status === "open" && <Countdown expiresAt={m.expiresAt} duration={m.duration} compact />}
                     </div>
                   </div>
+
                   <span style={{ fontSize: 12, color: "var(--text-secondary)", textTransform: "capitalize" }}>{m.category}</span>
                   <span style={{ fontSize: 11, color: "#6366f1", fontWeight: 700 }}>
                     {m.type === "MULTI_YESNO" ? "MULTI+Y/N" : m.type.replace("_", "/")}
@@ -241,6 +437,8 @@ export default function ManageMarketsPage() {
                   <span className={`badge-${m.status}`} style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 20, textTransform: "uppercase", display: "inline-block" }}>
                     {m.status}
                   </span>
+
+                  {/* Actions */}
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                     {/* Edit */}
                     <button onClick={() => startEdit(m)} title="Edit" style={{ width: 30, height: 30, borderRadius: 7, background: "var(--bg-card-hover)", border: "1px solid var(--border)", color: "var(--text-secondary)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s" }}
@@ -263,9 +461,7 @@ export default function ManageMarketsPage() {
                     {confirmDelete === m.id ? (
                       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                         {m.status === "settled" && (
-                          <span style={{ fontSize: 9, color: "var(--red)", fontWeight: 600 }}>
-                            Deletes all trade history
-                          </span>
+                          <span style={{ fontSize: 9, color: "var(--red)", fontWeight: 600 }}>Deletes all trade history</span>
                         )}
                         <div style={{ display: "flex", gap: 4 }}>
                           <button onClick={() => handleDelete(m.id)} style={{ display: "flex", alignItems: "center", gap: 3, padding: "4px 8px", borderRadius: 6, background: "#ef4444", border: "none", color: "white", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
@@ -282,7 +478,8 @@ export default function ManageMarketsPage() {
                         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "var(--bg-card-hover)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; }}>
                         <Trash2 size={13} />
                       </button>
-                    )}                  </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

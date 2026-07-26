@@ -45,6 +45,9 @@ export interface Market {
   priceAssetId?: string | null;
   priceAssetSymbol?: string | null;
   openingPrice?: number | null;
+  /** Homepage hero feature fields */
+  featured?: boolean;
+  featuredOrder?: number | null;
 }
 
 export interface Trade {
