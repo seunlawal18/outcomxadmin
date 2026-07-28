@@ -280,7 +280,7 @@ export default function HeroSlidesPage() {
   const handleSave = async (data: typeof EMPTY_FORM) => {
     const payload: Record<string, unknown> = {
       slideOrder:  data.slideOrder,
-      accentColor: data.accentColor,
+      accentColor: data.accentColor || "#6c63ff",
       active:      data.active,
       headline:    data.headline.trim() || "",
     };
