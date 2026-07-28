@@ -26,9 +26,12 @@ function FeaturedSlotsPanel({
     .filter(m => m.featured)
     .sort((a, b) => (a.featuredOrder ?? 99) - (b.featuredOrder ?? 99));
 
+  // Show all occupied slots + empty slots up to max+2, minimum 5
+  const maxSlot = Math.max(5, ...occupied.map(m => m.featuredOrder ?? 0)) + 2;
+  const slots = Array.from({ length: maxSlot }, (_, i) => i + 1);
+
   return (
     <div className="card" style={{ marginBottom: 20, padding: 0, overflow: "hidden" }}>
-      {/* Header with gradient */}
       <div style={{
         padding: "12px 18px",
         background: "linear-gradient(135deg, #f59e0b18, #f59e0b08)",
@@ -38,11 +41,11 @@ function FeaturedSlotsPanel({
         <Clapperboard size={15} color="#f59e0b" />
         <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>Hero Slideshow Slots</span>
         <span style={{ fontSize: 11, color: "var(--text-muted)", marginLeft: 2 }}>
-          {occupied.length}/5 occupied
+          {occupied.length} occupied · {maxSlot - occupied.length} available
         </span>
       </div>
       <div style={{ padding: "12px 18px", display: "flex", flexDirection: "column", gap: 6 }}>
-        {[1, 2, 3, 4, 5].map(slot => {
+        {slots.map(slot => {
           const m = occupied.find(f => f.featuredOrder === slot);
           return (
             <div key={slot} style={{
@@ -51,12 +54,13 @@ function FeaturedSlotsPanel({
               background: m ? "#f59e0b08" : "var(--bg-card-hover)",
               border: `1px solid ${m ? "#f59e0b33" : "var(--border)"}`,
             }}>
-              {/* Status dot */}
               <span style={{
                 width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
                 background: m ? (m.status === "open" ? "#10b981" : "#6b7280") : "#3f3f46",
               }} />
-              <span style={{ fontSize: 11, fontWeight: 700, color: "#f59e0b", minWidth: 44 }}>Slot {slot}</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: m ? "#f59e0b" : "var(--text-muted)", minWidth: 44 }}>
+                Slot {slot}
+              </span>
               {m ? (
                 <>
                   <span style={{ fontSize: 12, color: "var(--text-primary)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -67,21 +71,17 @@ function FeaturedSlotsPanel({
                       {m.heroTag}
                     </span>
                   )}
-                  <button onClick={() => onEditSlot(m)} title="Edit hero settings"
+                  <button onClick={() => onEditSlot(m)}
                     style={{ fontSize: 11, fontWeight: 600, color: "var(--text-secondary)", background: "none", border: "none", cursor: "pointer", padding: "2px 6px", borderRadius: 4, flexShrink: 0 }}
                     onMouseEnter={e => (e.currentTarget.style.background = "var(--bg-card-hover)")}
-                    onMouseLeave={e => (e.currentTarget.style.background = "none")}>
-                    Edit
-                  </button>
-                  <button onClick={() => onRemove(m)} title="Remove from hero"
+                    onMouseLeave={e => (e.currentTarget.style.background = "none")}>Edit</button>
+                  <button onClick={() => onRemove(m)}
                     style={{ fontSize: 11, fontWeight: 600, color: "var(--red)", background: "none", border: "none", cursor: "pointer", padding: "2px 6px", borderRadius: 4, flexShrink: 0 }}
                     onMouseEnter={e => (e.currentTarget.style.background = "var(--red-bg)")}
-                    onMouseLeave={e => (e.currentTarget.style.background = "none")}>
-                    Remove
-                  </button>
+                    onMouseLeave={e => (e.currentTarget.style.background = "none")}>Remove</button>
                 </>
               ) : (
-                <span style={{ fontSize: 12, color: "var(--text-muted)", flex: 1 }}>— empty —</span>
+                <span style={{ fontSize: 12, color: "var(--text-muted)", flex: 1 }}>— available —</span>
               )}
             </div>
           );
@@ -167,13 +167,13 @@ function HeroSlideshowEditor({
               <p style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.4px", margin: "0 0 8px" }}>
                 Slot position
               </p>
-              <div style={{ display: "flex", gap: 6 }}>
-                {[1, 2, 3, 4, 5].map(n => {
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {Array.from({ length: Math.max(5, (market.featuredOrder ?? 0) + 2) }, (_, i) => i + 1).map(n => {
                   const takenBy = allMarkets.find(m => m.id !== market.id && m.featured && m.featuredOrder === n);
                   const active = order === n;
                   return (
                     <button key={n} onClick={() => setOrder(n)}
-                      title={takenBy ? `Occupied: ${takenBy.title.slice(0, 30)}` : `Slot ${n} — empty`}
+                      title={takenBy ? `Occupied: ${takenBy.title.slice(0, 30)}` : `Slot ${n} — available`}
                       style={{ position: "relative", width: 38, height: 38, borderRadius: 20, fontSize: 13, fontWeight: 700, cursor: "pointer", border: `1px solid ${active ? "#f59e0b" : "var(--border)"}`, background: active ? "#f59e0b" : "var(--bg-card-hover)", color: active ? "#000" : takenBy ? "#ef4444" : "var(--text-secondary)", transition: "all 0.15s" }}>
                       {n}
                       {takenBy && !active && (
@@ -182,8 +182,15 @@ function HeroSlideshowEditor({
                     </button>
                   );
                 })}
+                <button onClick={() => setOrder(Math.max(5, (market.featuredOrder ?? 0) + 2) + 1)}
+                  title="Use a higher slot"
+                  style={{ width: 38, height: 38, borderRadius: 20, fontSize: 16, fontWeight: 700, cursor: "pointer", border: "1px dashed var(--border)", background: "var(--bg-card-hover)", color: "var(--text-muted)" }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "#f59e0b"; (e.currentTarget as HTMLElement).style.color = "#f59e0b"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; (e.currentTarget as HTMLElement).style.color = "var(--text-muted)"; }}>
+                  +
+                </button>
               </div>
-              <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "6px 0 0" }}>Red = slot occupied by another market</p>
+              <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "6px 0 0" }}>Red = occupied · Click + to use a higher slot number</p>
             </div>
 
             {/* ── Hero Background Banner ── */}

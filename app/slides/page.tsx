@@ -19,10 +19,12 @@ type FormState = typeof EMPTY_FORM;
 // ── Slide Form Modal ──────────────────────────────────────────────
 function SlideForm({
   initial,
+  occupiedOrders,
   onSave,
   onClose,
 }: {
   initial: FormState;
+  occupiedOrders: number[];
   onSave: (data: FormState) => Promise<void>;
   onClose: () => void;
 }) {
@@ -32,6 +34,8 @@ function SlideForm({
   const [imgError, setImgError]   = useState("");
   const fileRef  = useRef<HTMLInputElement>(null);
   const colorRef = useRef<HTMLInputElement>(null);
+  // Max slot = highest occupied + 5, minimum 10
+  const maxSlot = Math.max(10, ...occupiedOrders, form.slideOrder) + 5;
 
   const set = (k: keyof FormState, v: string | number | boolean) =>
     setForm(prev => ({ ...prev, [k]: v }));
@@ -46,7 +50,10 @@ function SlideForm({
   };
 
   const handleSave = async () => {
-    if (!form.headline.trim()) { toast("Headline is required", "error"); return; }
+    if (!form.headline.trim() && !form.bannerImage) {
+      toast("Add a headline or a background image — at least one is required", "error");
+      return;
+    }
     setSaving(true);
     await onSave(form);
     setSaving(false);
@@ -93,14 +100,48 @@ function SlideForm({
           </div>
 
           {/* Row: order + active */}
-          <div style={{ display: "flex", gap: 12, alignItems: "flex-end" }}>
-            <div style={{ flex: "0 0 100px" }}>
-              <label style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.4px", display: "block", marginBottom: 6 }}>Slide Order</label>
-              <input className="input-dark" type="number" min={1} max={99} value={form.slideOrder}
-                onChange={e => set("slideOrder", parseInt(e.target.value) || 1)}
-                style={{ fontSize: 14, fontWeight: 700, textAlign: "center" }} />
+          <div style={{ display: "flex", gap: 12, alignItems: "flex-start", flexWrap: "wrap" }}>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <label style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.4px", display: "block", marginBottom: 6 }}>
+                Slide Order <span style={{ fontWeight: 400, textTransform: "none" }}>(pick a slot)</span>
+              </label>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 6 }}>
+                {Array.from({ length: maxSlot }, (_, i) => i + 1).map(n => {
+                  const isTaken = occupiedOrders.includes(n) && n !== initial.slideOrder;
+                  const isSelected = form.slideOrder === n;
+                  return (
+                    <button key={n} onClick={() => set("slideOrder", n)}
+                      title={isTaken ? `Slot ${n} — occupied` : isSelected ? `Slot ${n} — selected` : `Slot ${n} — available`}
+                      style={{
+                        width: 34, height: 34, borderRadius: 8, fontSize: 12, fontWeight: 700,
+                        cursor: "pointer", border: "1px solid", transition: "all 0.15s", position: "relative",
+                        borderColor: isSelected ? "#f59e0b" : isTaken ? "var(--border)" : "var(--border)",
+                        background: isSelected ? "#f59e0b" : isTaken ? "var(--bg-primary)" : "var(--bg-card-hover)",
+                        color: isSelected ? "#000" : isTaken ? "var(--text-muted)" : "var(--text-secondary)",
+                        opacity: isTaken ? 0.5 : 1,
+                      }}>
+                      {n}
+                      {isTaken && !isSelected && (
+                        <span style={{ position: "absolute", top: -3, right: -3, width: 7, height: 7, borderRadius: "50%", background: "#ef4444", border: "2px solid var(--bg-secondary)" }} />
+                      )}
+                    </button>
+                  );
+                })}
+                {/* + Add more slots button */}
+                <button
+                  onClick={() => set("slideOrder", maxSlot + 1)}
+                  title="Use a higher slot number"
+                  style={{ width: 34, height: 34, borderRadius: 8, fontSize: 16, fontWeight: 700, cursor: "pointer", border: "1px dashed var(--border)", background: "var(--bg-card-hover)", color: "var(--text-muted)", transition: "all 0.15s" }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = "#f59e0b"; (e.currentTarget as HTMLElement).style.color = "#f59e0b"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--border)"; (e.currentTarget as HTMLElement).style.color = "var(--text-muted)"; }}>
+                  +
+                </button>
+              </div>
+              <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}>
+                Red dot = taken · Amber = selected · Click <strong>+</strong> to add more slots
+              </p>
             </div>
-            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", paddingBottom: 10 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", paddingTop: 24 }}>
               <input type="checkbox" checked={form.active} onChange={e => set("active", e.target.checked)}
                 style={{ width: 15, height: 15, accentColor: "#10b981", cursor: "pointer" }} />
               <span style={{ fontSize: 13, color: "var(--text-primary)" }}>Active (visible on site)</span>
@@ -426,7 +467,8 @@ export default function HeroSlidesPage() {
             bannerImage:  editing.bannerImage ?? "",
             accentColor:  editing.accentColor,
             active:       editing.active,
-          } : EMPTY_FORM}
+          } : { ...EMPTY_FORM, slideOrder: Math.max(0, ...sorted.map(s => s.slideOrder)) + 1 }}
+          occupiedOrders={sorted.map(s => s.slideOrder)}
           onSave={handleSave}
           onClose={() => { setFormOpen(false); setEditing(null); }}
         />
