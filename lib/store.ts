@@ -43,6 +43,7 @@ function toMarket(m: ApiMarket): Market {
     heroAccent:       m.heroAccent ?? null,
     heroBanner:       m.heroBanner ?? null,
   };
+}
 
 type Result = { ok: true } | { ok: false; error: string };
 

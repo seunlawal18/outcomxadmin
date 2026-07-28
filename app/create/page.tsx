@@ -67,7 +67,6 @@ export default function CreateMarketPage() {
   const [banner, setBanner]               = useState<string>("");
   const [bannerError, setBannerError]     = useState<string>("");
   const [isBannerDragging, setIsBannerDragging] = useState(false);
-  const bannerInputRef = useRef<HTMLInputElement>(null);
   const [resolutionSource, setResolutionSource] = useState<string>("");
   const [imageError, setImageError]       = useState("");
   const [isDragging, setIsDragging]       = useState(false);
