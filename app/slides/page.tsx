@@ -278,22 +278,23 @@ export default function HeroSlidesPage() {
   const openEdit   = (s: PromoSlide) => { setEditing(s); setFormOpen(true); };
 
   const handleSave = async (data: typeof EMPTY_FORM) => {
-    const payload = {
-      slideOrder:   data.slideOrder,
-      tag:          data.tag || null,
-      headline:     data.headline.trim(),
-      subheadline:  data.subheadline || null,
-      ctaText:      data.ctaText || null,
-      ctaHref:      data.ctaHref || null,
-      bannerImage:  data.bannerImage || null,
-      accentColor:  data.accentColor,
-      active:       data.active,
+    const payload: Record<string, unknown> = {
+      slideOrder:  data.slideOrder,
+      accentColor: data.accentColor,
+      active:      data.active,
+      headline:    data.headline.trim() || "",
     };
+    // Only include optional fields if they have a value — avoids null validation errors
+    if (data.tag)         payload.tag         = data.tag;
+    if (data.subheadline) payload.subheadline  = data.subheadline;
+    if (data.ctaText)     payload.ctaText      = data.ctaText;
+    if (data.ctaHref)     payload.ctaHref      = data.ctaHref;
+    if (data.bannerImage) payload.bannerImage  = data.bannerImage;
     let res;
     if (editing) {
-      res = await updatePromoSlide(editing.id, payload);
+      res = await updatePromoSlide(editing.id, payload as Parameters<typeof updatePromoSlide>[1]);
     } else {
-      res = await createPromoSlide(payload);
+      res = await createPromoSlide(payload as Parameters<typeof createPromoSlide>[0]);
     }
     if (res.ok) {
       toast(editing ? "Slide updated" : "Slide created");
