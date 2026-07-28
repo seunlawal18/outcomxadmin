@@ -128,10 +128,17 @@ export async function apiAdminToggleMarket(id: number) {
   return apiFetch<ApiMarket>(`/api/admin/markets/${id}/toggle`, { method: "PATCH" });
 }
 
-export async function apiAdminFeatureMarket(id: number, featured: boolean, featuredOrder?: number) {
+export async function apiAdminFeatureMarket(
+  id: number,
+  featured: boolean,
+  featuredOrder?: number,
+  heroTag?: string,
+  heroSub?: string,
+  heroAccent?: string,
+) {
   return apiFetch<ApiMarket>(`/api/admin/markets/${id}/feature`, {
     method: "PATCH",
-    body: JSON.stringify({ featured, featuredOrder }),
+    body: JSON.stringify({ featured, featuredOrder, heroTag, heroSub, heroAccent }),
   });
 }
 
@@ -287,9 +294,12 @@ export interface ApiMarket {
   openingPrice: number | null;
   createdAt: string;
   outcomes?: ApiMarketOutcome[];
-  /** Homepage hero feature fields */
+  /** Homepage hero slideshow fields */
   featured?: boolean;
   featuredOrder?: number | null;
+  heroTag?: string | null;
+  heroSub?: string | null;
+  heroAccent?: string | null;
 }
 
 export interface SettlementBreakdown {
