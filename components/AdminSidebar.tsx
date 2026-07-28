@@ -9,12 +9,14 @@ import {
   LayoutDashboard, PlusCircle, ListFilter,
   CheckSquare2, Users, TrendingUp, LogOut,
   ExternalLink, Menu, X, Sun, Moon, DollarSign, Banknote,
+  Clapperboard,
 } from "lucide-react";
 
 const MAIN_APP_URL = process.env.NEXT_PUBLIC_MAIN_APP_URL ?? "http://localhost:3000";
 
 const navItems = [
   { href: "/dashboard",    label: "Dashboard",       icon: LayoutDashboard },
+  { href: "/slides",       label: "Hero Slides",     icon: Clapperboard    },
   { href: "/create",       label: "Create Market",   icon: PlusCircle      },
   { href: "/manage",       label: "Manage Markets",  icon: ListFilter      },
   { href: "/resolve",      label: "Resolve Markets", icon: CheckSquare2    },
@@ -26,10 +28,11 @@ const navItems = [
 export default function AdminSidebar() {
   const pathname  = usePathname();
   const router    = useRouter();
-  const { adminLogout, markets } = useStore();
+  const { adminLogout, markets, promoSlides } = useStore();
   const { theme, toggleTheme } = useTheme();
   const isDark = theme === "dark";
   const [mobileOpen, setMobileOpen] = useState(false);
+  const activeSlideCount = (promoSlides ?? []).filter(s => s.active).length;
 
   const sidebarContent = (
     <>
@@ -46,15 +49,24 @@ export default function AdminSidebar() {
       <nav style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
         {navItems.map(({ href, label, icon: Icon }) => {
           const isActive = pathname === href;
+          const badge = href === "/slides" ? (activeSlideCount > 0 ? activeSlideCount : null) : null;
           return (
             <Link
               key={href}
               href={href}
               className={`sidebar-link ${isActive ? "active" : ""}`}
               onClick={() => setMobileOpen(false)}
+              style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}
             >
-              <Icon size={16} />
-              {label}
+              <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Icon size={16} />
+                {label}
+              </span>
+              {badge !== null && (
+                <span style={{ fontSize: 10, fontWeight: 700, background: "#f59e0b", color: "#000", borderRadius: 20, padding: "1px 6px", lineHeight: 1.6 }}>
+                  {badge}
+                </span>
+              )}
             </Link>
           );
         })}

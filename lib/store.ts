@@ -1,12 +1,13 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { Market, MarketCategory, MarketDuration, MarketStatus } from "./types";
+import { Market, MarketCategory, MarketDuration, MarketStatus, PromoSlide } from "./types";
 import {
   apiAdminLogin, clearAdminToken,
   apiAdminGetMarkets, apiAdminCreateMarket, apiAdminUpdateMarket,
   apiAdminDeleteMarket, apiAdminToggleMarket, apiAdminResolveMarket,
   apiAdminFeatureMarket, apiAdminGetFeaturedMarkets,
-  ApiMarket, SettlementBreakdown,
+  apiAdminGetPromoSlides, apiAdminCreatePromoSlide, apiAdminUpdatePromoSlide, apiAdminDeletePromoSlide,
+  ApiMarket, ApiPromoSlide, SettlementBreakdown,
 } from "./api";
 
 // ── Convert API market → frontend Market type ─────────────────────
@@ -51,13 +52,12 @@ type Result = { ok: true } | { ok: false; error: string };
 interface AdminState {
   isAdminLoggedIn: boolean;
   markets: Market[];
+  promoSlides: PromoSlide[];
 
   adminLogin:  (email: string, password: string) => Promise<Result>;
   adminLogout: () => void;
 
   fetchMarkets: () => Promise<Result>;
-  // Applies a real-time update (trade placed / settled / closed) to one
-  // already-loaded market in place — see components/RealtimeSync.tsx.
   patchMarket: (marketId: number, updates: Partial<Market>) => void;
   createMarket: (data: {
     title: string; category: MarketCategory; type: Market["type"];
@@ -76,6 +76,11 @@ interface AdminState {
   resolveMarket: (id: number, result: string | Record<string, "Yes" | "No">) => Promise<
     { ok: true; settlement: SettlementBreakdown } | { ok: false; error: string }
   >;
+
+  fetchPromoSlides: () => Promise<Result>;
+  createPromoSlide: (data: Omit<PromoSlide, "id" | "createdAt">) => Promise<Result>;
+  updatePromoSlide: (id: number, data: Partial<Omit<PromoSlide, "id" | "createdAt">>) => Promise<Result>;
+  deletePromoSlide: (id: number) => Promise<Result>;
 }
 
 export const useStore = create<AdminState>()(
@@ -83,6 +88,7 @@ export const useStore = create<AdminState>()(
     (set, get) => ({
       isAdminLoggedIn: false,
       markets: [],
+      promoSlides: [],
 
       adminLogin: async (email, password) => {
         const res = await apiAdminLogin(email, password);
@@ -173,6 +179,36 @@ export const useStore = create<AdminState>()(
         const res = await apiAdminFeatureMarket(id, featured, featuredOrder, heroTag, heroSub, heroAccent, heroBanner, heroHref);
         if (!res.ok || !res.data) return { ok: false, error: res.error ?? "Failed to update feature status." };
         set((state) => ({ markets: state.markets.map((m) => m.id === id ? toMarket(res.data!) : m) }));
+        return { ok: true };
+      },
+
+      fetchPromoSlides: async () => {
+        const res = await apiAdminGetPromoSlides();
+        if (res.ok && res.data) {
+          set({ promoSlides: res.data });
+          return { ok: true };
+        }
+        return { ok: false, error: res.error ?? "Could not load promo slides." };
+      },
+
+      createPromoSlide: async (data) => {
+        const res = await apiAdminCreatePromoSlide(data);
+        if (!res.ok || !res.data) return { ok: false, error: res.error ?? "Failed to create slide." };
+        set((state) => ({ promoSlides: [...state.promoSlides, res.data!] }));
+        return { ok: true };
+      },
+
+      updatePromoSlide: async (id, data) => {
+        const res = await apiAdminUpdatePromoSlide(id, data);
+        if (!res.ok || !res.data) return { ok: false, error: res.error ?? "Failed to update slide." };
+        set((state) => ({ promoSlides: state.promoSlides.map(s => s.id === id ? res.data! : s) }));
+        return { ok: true };
+      },
+
+      deletePromoSlide: async (id) => {
+        const res = await apiAdminDeletePromoSlide(id);
+        if (!res.ok) return { ok: false, error: res.error ?? "Failed to delete slide." };
+        set((state) => ({ promoSlides: state.promoSlides.filter(s => s.id !== id) }));
         return { ok: true };
       },
     }),

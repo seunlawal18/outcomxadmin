@@ -107,3 +107,18 @@ export function formatCountdown(expiresAt: string): { label: string; urgent: boo
 
   return { label, urgent: diff < 5 * 60 * 1000, expired: false };
 }
+
+// ── Promo Slides ──────────────────────────────────────────────────
+export interface PromoSlide {
+  id: number;
+  slideOrder: number;
+  tag: string | null;
+  headline: string;
+  subheadline: string | null;
+  ctaText: string | null;
+  ctaHref: string | null;
+  bannerImage: string | null;
+  accentColor: string;
+  active: boolean;
+  createdAt: string;
+}

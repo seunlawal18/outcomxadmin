@@ -306,6 +306,44 @@ export interface ApiMarket {
   heroHref?: string | null;
 }
 
+// ── Promo Slides ──────────────────────────────────────────────────
+
+export interface ApiPromoSlide {
+  id: number;
+  slideOrder: number;
+  tag: string | null;
+  headline: string;
+  subheadline: string | null;
+  ctaText: string | null;
+  ctaHref: string | null;
+  bannerImage: string | null;
+  accentColor: string;
+  active: boolean;
+  createdAt: string;
+}
+
+export async function apiAdminGetPromoSlides() {
+  return apiFetch<ApiPromoSlide[]>("/api/admin/slides");
+}
+
+export async function apiAdminCreatePromoSlide(data: Omit<ApiPromoSlide, "id" | "createdAt">) {
+  return apiFetch<ApiPromoSlide>("/api/admin/slides", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function apiAdminUpdatePromoSlide(id: number, data: Partial<Omit<ApiPromoSlide, "id" | "createdAt">>) {
+  return apiFetch<ApiPromoSlide>(`/api/admin/slides/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function apiAdminDeletePromoSlide(id: number) {
+  return apiFetch(`/api/admin/slides/${id}`, { method: "DELETE" });
+}
+
 export interface SettlementBreakdown {
   totalPool:       number;
   platformFee:     number;
