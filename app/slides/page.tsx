@@ -394,7 +394,7 @@ export default function HeroSlidesPage() {
               {/* Title */}
               <div style={{ paddingRight: 10 }}>
                 <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", margin: "0 0 2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {s.headline}
+                  {s.headline || <span style={{ color: "var(--text-muted)", fontStyle: "italic" }}>Image only</span>}
                 </p>
                 {s.subheadline && (
                   <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.subheadline}</p>
@@ -461,12 +461,12 @@ export default function HeroSlidesPage() {
           initial={editing ? {
             slideOrder:   editing.slideOrder,
             tag:          editing.tag ?? "",
-            headline:     editing.headline,
+            headline:     editing.headline ?? "",
             subheadline:  editing.subheadline ?? "",
             ctaText:      editing.ctaText ?? "",
             ctaHref:      editing.ctaHref ?? "",
             bannerImage:  editing.bannerImage ?? "",
-            accentColor:  editing.accentColor,
+            accentColor:  editing.accentColor || "#6c63ff",
             active:       editing.active,
           } : { ...EMPTY_FORM, slideOrder: Math.max(0, ...sorted.map(s => s.slideOrder)) + 1 }}
           occupiedOrders={sorted.map(s => s.slideOrder)}

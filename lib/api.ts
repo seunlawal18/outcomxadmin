@@ -312,7 +312,7 @@ export interface ApiPromoSlide {
   id: number;
   slideOrder: number;
   tag: string | null;
-  headline: string;
+  headline: string | null;
   subheadline: string | null;
   ctaText: string | null;
   ctaHref: string | null;
