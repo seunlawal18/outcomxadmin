@@ -268,7 +268,7 @@ export default function HeroSlidesPage() {
   useEffect(() => {
     setLoading(true);
     fetchPromoSlides().then(r => {
-      if (!r.ok) setActionError(r.error);
+      if (!r.ok) setActionError(r.error ?? "Could not load slides — is the backend running?");
       setLoading(false);
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -282,14 +282,14 @@ export default function HeroSlidesPage() {
       slideOrder:  data.slideOrder,
       accentColor: data.accentColor || "#6c63ff",
       active:      data.active,
-      headline:    data.headline.trim() || "",
     };
-    // Only include optional fields if they have a value — avoids null validation errors
-    if (data.tag)         payload.tag         = data.tag;
-    if (data.subheadline) payload.subheadline  = data.subheadline;
-    if (data.ctaText)     payload.ctaText      = data.ctaText;
-    if (data.ctaHref)     payload.ctaHref      = data.ctaHref;
-    if (data.bannerImage) payload.bannerImage  = data.bannerImage;
+    // Only include fields that have actual values
+    if (data.headline.trim()) payload.headline   = data.headline.trim();
+    if (data.tag)             payload.tag        = data.tag;
+    if (data.subheadline)     payload.subheadline = data.subheadline;
+    if (data.ctaText)         payload.ctaText    = data.ctaText;
+    if (data.ctaHref)         payload.ctaHref    = data.ctaHref;
+    if (data.bannerImage)     payload.bannerImage = data.bannerImage;
     let res;
     if (editing) {
       res = await updatePromoSlide(editing.id, payload as Parameters<typeof updatePromoSlide>[1]);
