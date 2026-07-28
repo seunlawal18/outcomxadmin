@@ -51,6 +51,7 @@ export interface Market {
   heroTag?: string | null;
   heroSub?: string | null;
   heroAccent?: string | null;
+  heroBanner?: string | null;
 }
 
 export interface Trade {

@@ -101,15 +101,26 @@ function HeroSlideshowEditor({
 }: {
   market: Market;
   allMarkets: Market[];
-  onSave: (featured: boolean, order: number, tag: string, sub: string, accent: string) => Promise<void>;
+  onSave: (featured: boolean, order: number, tag: string, sub: string, accent: string, heroBanner: string) => Promise<void>;
 }) {
-  const [featured, setFeatured] = useState(market.featured ?? false);
-  const [order,    setOrder]    = useState(market.featuredOrder ?? 1);
-  const [tag,      setTag]      = useState(market.heroTag ?? "");
-  const [sub,      setSub]      = useState(market.heroSub ?? "");
-  const [accent,   setAccent]   = useState(market.heroAccent ?? "#10b981");
-  const [saving,   setSaving]   = useState(false);
-  const colorRef = useRef<HTMLInputElement>(null);
+  const [featured,       setFeatured]       = useState(market.featured ?? false);
+  const [order,          setOrder]          = useState(market.featuredOrder ?? 1);
+  const [tag,            setTag]            = useState(market.heroTag ?? "");
+  const [sub,            setSub]            = useState(market.heroSub ?? "");
+  const [accent,         setAccent]         = useState(market.heroAccent ?? "#10b981");
+  const [heroBanner,     setHeroBanner]     = useState(market.heroBanner ?? "");
+  const [saving,         setSaving]         = useState(false);
+  const [bannerDragging, setBannerDragging] = useState(false);
+  const colorRef       = useRef<HTMLInputElement>(null);
+  const heroBannerRef  = useRef<HTMLInputElement>(null);
+
+  const processBanner = (file: File) => {
+    if (!file.type.startsWith("image/")) return;
+    if (file.size > 4 * 1024 * 1024) return;
+    const reader = new FileReader();
+    reader.onload = e => setHeroBanner(e.target?.result as string);
+    reader.readAsDataURL(file);
+  };
 
   const handleSave = async () => {
     if (featured) {
@@ -120,18 +131,19 @@ function HeroSlideshowEditor({
       }
     }
     setSaving(true);
-    await onSave(featured, order, tag, sub, accent);
+    await onSave(featured, order, tag, sub, accent, heroBanner);
     setSaving(false);
   };
+
+  // Derived: background for the live preview
+  const previewBg = heroBanner
+    ? `url("${heroBanner}") center/cover no-repeat`
+    : "linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #1e1b4b 100%)";
 
   return (
     <div style={{ borderRadius: 12, overflow: "hidden", border: "1px solid #f59e0b44" }}>
       {/* Gradient header */}
-      <div style={{
-        padding: "11px 16px",
-        background: "linear-gradient(135deg, #f59e0b22, #f59e0b0a)",
-        display: "flex", alignItems: "center", gap: 8,
-      }}>
+      <div style={{ padding: "11px 16px", background: "linear-gradient(135deg, #f59e0b22, #f59e0b0a)", display: "flex", alignItems: "center", gap: 8 }}>
         <Clapperboard size={14} color="#f59e0b" />
         <span style={{ fontSize: 12, fontWeight: 700, color: "#f59e0b", textTransform: "uppercase", letterSpacing: "0.5px" }}>
           Hero Slideshow
@@ -139,6 +151,7 @@ function HeroSlideshowEditor({
       </div>
 
       <div style={{ padding: "14px 16px", background: "var(--bg-primary)", display: "flex", flexDirection: "column", gap: 14 }}>
+
         {/* Feature toggle */}
         <label style={{ display: "flex", alignItems: "center", gap: 9, cursor: "pointer" }}>
           <input type="checkbox" checked={featured} onChange={e => setFeatured(e.target.checked)}
@@ -160,29 +173,71 @@ function HeroSlideshowEditor({
                   return (
                     <button key={n} onClick={() => setOrder(n)}
                       title={takenBy ? `Occupied: ${takenBy.title.slice(0, 30)}` : `Slot ${n} — empty`}
-                      style={{
-                        position: "relative", width: 38, height: 38,
-                        borderRadius: 20, fontSize: 13, fontWeight: 700, cursor: "pointer",
-                        border: `1px solid ${active ? "#f59e0b" : "var(--border)"}`,
-                        background: active ? "#f59e0b" : "var(--bg-card-hover)",
-                        color: active ? "#000" : takenBy ? "#ef4444" : "var(--text-secondary)",
-                        transition: "all 0.15s",
-                      }}>
+                      style={{ position: "relative", width: 38, height: 38, borderRadius: 20, fontSize: 13, fontWeight: 700, cursor: "pointer", border: `1px solid ${active ? "#f59e0b" : "var(--border)"}`, background: active ? "#f59e0b" : "var(--bg-card-hover)", color: active ? "#000" : takenBy ? "#ef4444" : "var(--text-secondary)", transition: "all 0.15s" }}>
                       {n}
                       {takenBy && !active && (
-                        <span style={{
-                          position: "absolute", top: -3, right: -3,
-                          width: 8, height: 8, borderRadius: "50%",
-                          background: "#ef4444", border: "2px solid var(--bg-secondary)",
-                        }} />
+                        <span style={{ position: "absolute", top: -3, right: -3, width: 8, height: 8, borderRadius: "50%", background: "#ef4444", border: "2px solid var(--bg-secondary)" }} />
                       )}
                     </button>
                   );
                 })}
               </div>
-              <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "6px 0 0" }}>
-                Red = slot occupied by another market
-              </p>
+              <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "6px 0 0" }}>Red = slot occupied by another market</p>
+            </div>
+
+            {/* ── Hero Background Banner ── */}
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.4px", display: "block", marginBottom: 6 }}>
+                Slide Background Image <span style={{ fontWeight: 400, textTransform: "none" }}>(replaces default gradient · 1200×400px · max 4MB)</span>
+              </label>
+
+              {heroBanner ? (
+                /* ── Live hero preview ── */
+                <div style={{ position: "relative", borderRadius: 10, overflow: "hidden", border: "1px solid var(--border)" }}>
+                  <div style={{ width: "100%", height: "clamp(100px, 14vw, 160px)", background: previewBg, position: "relative" }}>
+                    {/* Gradient overlay — same as real hero */}
+                    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.3) 55%, transparent 100%)" }} />
+                    {/* Simulated text overlay */}
+                    <div style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", maxWidth: "60%" }}>
+                      {tag && <span style={{ fontSize: 9, fontWeight: 800, color: accent, letterSpacing: "1px", textTransform: "uppercase", display: "block", marginBottom: 4 }}>{tag}</span>}
+                      <p style={{ fontSize: 13, fontWeight: 700, color: "#fff", margin: "0 0 4px", lineHeight: 1.3 }}>
+                        {market.title.length > 50 ? market.title.slice(0, 50) + "…" : market.title}
+                      </p>
+                      {sub && <p style={{ fontSize: 10, color: "rgba(255,255,255,0.75)", margin: 0 }}>{sub}</p>}
+                    </div>
+                    {/* Preview label */}
+                    <span style={{ position: "absolute", bottom: 6, right: 10, fontSize: 9, color: "rgba(255,255,255,0.5)", fontWeight: 700, letterSpacing: "0.5px" }}>HERO PREVIEW</span>
+                  </div>
+                  {/* Controls bar */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", background: "var(--bg-card-hover)", borderTop: "1px solid var(--border)" }}>
+                    <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Custom background set</span>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button onClick={() => heroBannerRef.current?.click()}
+                        style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 6, background: "var(--bg-primary)", border: "1px solid var(--border)", color: "var(--text-secondary)", cursor: "pointer" }}>
+                        Replace
+                      </button>
+                      <button onClick={() => setHeroBanner("")}
+                        style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 6, background: "var(--red-bg)", border: "1px solid var(--red-border)", color: "var(--red)", cursor: "pointer" }}>
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* ── Upload drop zone ── */
+                <div
+                  onDragOver={e => { e.preventDefault(); setBannerDragging(true); }}
+                  onDragLeave={() => setBannerDragging(false)}
+                  onDrop={e => { e.preventDefault(); setBannerDragging(false); const f = e.dataTransfer.files?.[0]; if (f) processBanner(f); }}
+                  onClick={() => heroBannerRef.current?.click()}
+                  style={{ border: `2px dashed ${bannerDragging ? "#f59e0b" : "var(--border)"}`, borderRadius: 10, cursor: "pointer", background: bannerDragging ? "#f59e0b08" : "var(--bg-card-hover)", transition: "all 0.2s", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 5, padding: "20px 16px", aspectRatio: "3/1" }}>
+                  <ImagePlus size={20} color={bannerDragging ? "#f59e0b" : "var(--text-muted)"} />
+                  <p style={{ fontSize: 12, color: "var(--text-secondary)", margin: 0 }}>Drop image or click to upload</p>
+                  <p style={{ fontSize: 10, color: "var(--text-muted)", margin: 0 }}>Recommended: 1200 × 400 px · Hero height: clamp(120px, 18vw, 200px)</p>
+                </div>
+              )}
+              <input ref={heroBannerRef} type="file" accept="image/*" style={{ display: "none" }}
+                onChange={e => { const f = e.target.files?.[0]; if (f) processBanner(f); if (heroBannerRef.current) heroBannerRef.current.value = ""; }} />
             </div>
 
             {/* Tag label */}
@@ -191,8 +246,7 @@ function HeroSlideshowEditor({
                 Tag label <span style={{ fontWeight: 400, textTransform: "none" }}>(optional — e.g. 🔥 HOT MARKET)</span>
               </label>
               <input className="input-dark" value={tag} onChange={e => setTag(e.target.value)}
-                placeholder="🔥 HOT MARKET" maxLength={40}
-                style={{ fontSize: 13, width: "100%" }} />
+                placeholder="🔥 HOT MARKET" maxLength={40} style={{ fontSize: 13, width: "100%" }} />
             </div>
 
             {/* Subheadline */}
@@ -211,19 +265,12 @@ function HeroSlideshowEditor({
                 Accent color <span style={{ fontWeight: 400, textTransform: "none" }}>(optional)</span>
               </label>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                {/* Color swatch — clicking opens native picker */}
-                <button onClick={() => colorRef.current?.click()} style={{
-                  width: 32, height: 32, borderRadius: 8, flexShrink: 0,
-                  background: accent, border: "2px solid var(--border)",
-                  cursor: "pointer", padding: 0,
-                }} title="Pick color" />
+                <button onClick={() => colorRef.current?.click()} style={{ width: 32, height: 32, borderRadius: 8, flexShrink: 0, background: accent, border: "2px solid var(--border)", cursor: "pointer", padding: 0 }} title="Pick color" />
                 <input ref={colorRef} type="color" value={accent} onChange={e => setAccent(e.target.value)}
                   style={{ position: "absolute", opacity: 0, pointerEvents: "none", width: 0, height: 0 }} />
                 <input className="input-dark" value={accent}
                   onChange={e => { if (/^#[0-9a-fA-F]{0,6}$/.test(e.target.value)) setAccent(e.target.value); }}
-                  placeholder="#10b981" maxLength={7}
-                  style={{ fontSize: 13, width: 110, fontFamily: "monospace" }} />
-                {/* Quick presets */}
+                  placeholder="#10b981" maxLength={7} style={{ fontSize: 13, width: 110, fontFamily: "monospace" }} />
                 {["#10b981","#6366f1","#f59e0b","#ef4444","#3b82f6"].map(c => (
                   <button key={c} onClick={() => setAccent(c)} title={c}
                     style={{ width: 20, height: 20, borderRadius: "50%", background: c, border: accent === c ? "2px solid white" : "2px solid transparent", cursor: "pointer", padding: 0, flexShrink: 0 }} />
@@ -235,13 +282,7 @@ function HeroSlideshowEditor({
 
         {/* Save button */}
         <div>
-          <button onClick={handleSave} disabled={saving} style={{
-            display: "inline-flex", alignItems: "center", gap: 7,
-            padding: "9px 20px", borderRadius: 9, fontSize: 13, fontWeight: 700,
-            background: "#f59e0b", border: "none", color: "#000",
-            cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1,
-            transition: "opacity 0.15s",
-          }}>
+          <button onClick={handleSave} disabled={saving} style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "9px 20px", borderRadius: 9, fontSize: 13, fontWeight: 700, background: "#f59e0b", border: "none", color: "#000", cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.7 : 1 }}>
             <Star size={13} fill="#000" color="#000" />
             {saving ? "Saving…" : "Save Hero Settings"}
           </button>
@@ -314,13 +355,14 @@ export default function ManageMarketsPage() {
     setRefreshing(false);
   };
 
-  const handleFeatureSave = async (market: Market, featured: boolean, order: number, tag: string, sub: string, accent: string) => {
+  const handleFeatureSave = async (market: Market, featured: boolean, order: number, tag: string, sub: string, accent: string, heroBanner: string) => {
     const res = await featureMarket(
       market.id, featured,
       featured ? order : undefined,
       tag || undefined,
       sub || undefined,
       accent || undefined,
+      heroBanner || undefined,
     );
     if (res.ok) {
       toast(featured ? `⭐ Slot ${order} set — hero updated` : "Removed from hero slideshow");
@@ -478,7 +520,7 @@ export default function ManageMarketsPage() {
                 <HeroSlideshowEditor
                   market={m}
                   allMarkets={markets}
-                  onSave={(featured, order, tag, sub, accent) => handleFeatureSave(m, featured, order, tag, sub, accent)}
+                  onSave={(featured, order, tag, sub, accent, heroBanner) => handleFeatureSave(m, featured, order, tag, sub, accent, heroBanner)}
                 />
 
                 <div style={{ display: "flex", gap: 8 }}>
