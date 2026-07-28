@@ -55,7 +55,6 @@ export default function CreateMarketPage() {
   const { createMarket } = useStore();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const bannerInputRef = useRef<HTMLInputElement>(null);
 
   const [title, setTitle]                 = useState("");
   const [category, setCategory]           = useState<MarketCategory>("sports");
@@ -64,9 +63,6 @@ export default function CreateMarketPage() {
   const [customOptions, setCustomOptions] = useState<string[]>(["Team A", "Draw", "Team B"]);
   const [newOption, setNewOption]         = useState("");
   const [image, setImage]                 = useState<string>("");
-  const [banner, setBanner]               = useState<string>("");
-  const [bannerError, setBannerError]     = useState<string>("");
-  const [isBannerDragging, setIsBannerDragging] = useState(false);
   const [resolutionSource, setResolutionSource] = useState<string>("");
   const [imageError, setImageError]       = useState("");
   const [isDragging, setIsDragging]       = useState(false);
@@ -185,15 +181,6 @@ export default function CreateMarketPage() {
     reader.readAsDataURL(file);
   };
 
-  const processBannerFile = (file: File) => {
-    setBannerError("");
-    if (!file.type.startsWith("image/")) { setBannerError("Please upload an image file."); return; }
-    if (file.size > 4 * 1024 * 1024)    { setBannerError("Banner must be under 4MB."); return; }
-    const reader = new FileReader();
-    reader.onload = (e) => setBanner(e.target?.result as string);
-    reader.readAsDataURL(file);
-  };
-
   const handleSubmit = async () => {
     setError("");
     if (!title.trim() || title.trim().length < 10) {
@@ -217,7 +204,6 @@ export default function CreateMarketPage() {
       title: title.trim(), category, type, duration,
       options,
       image: image || undefined,
-      banner: banner.trim() || undefined,
       resolutionSource: resolutionSource.trim() || undefined,
       probabilities: finalProbs,
       priceAssetId: trackLivePrice && selectedCoin ? selectedCoin.id : undefined,
@@ -225,10 +211,7 @@ export default function CreateMarketPage() {
     });
     setSubmitting(false);
 
-    if (!res.ok) {
-      setError(res.error);
-      return;
-    }
+    if (!res.ok) { setError(res.error); return; }
     setSuccess(true);
     setTimeout(() => router.push("/manage"), 1500);
   };
@@ -517,47 +500,6 @@ export default function CreateMarketPage() {
           <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 8, lineHeight: 1.5 }}>
             💡 These are opening odds only. As users place trades, probabilities shift automatically based on trading volume.
           </p>
-        </Section>
-
-        {/* ── Banner Image (Hero Slideshow background) ── */}
-        <Section icon={<ImagePlus size={15} />} title="Hero Banner Image (optional)"
-          subtitle="Used as the slide background when this market is featured on the homepage hero. Recommended: 1200×400 px, landscape/16:9. Max 4MB.">
-          {banner ? (
-            <div style={{ position: "relative", display: "inline-block", width: "100%" }}>
-              {/* Preview at correct hero aspect ratio */}
-              <div style={{ width: "100%", height: "clamp(120px, 18vw, 200px)", borderRadius: 10, overflow: "hidden", border: "1px solid var(--border)", position: "relative" }}>
-                <img src={banner} alt="banner preview" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.15) 60%, transparent 100%)" }} />
-                <span style={{ position: "absolute", bottom: 8, left: 12, fontSize: 10, color: "rgba(255,255,255,0.7)", fontWeight: 600, letterSpacing: "0.5px" }}>
-                  HERO PREVIEW — {Math.round(banner.length / 1024)}KB
-                </span>
-              </div>
-              <button onClick={() => { setBanner(""); if (bannerInputRef.current) bannerInputRef.current.value = ""; }}
-                style={{ position: "absolute", top: 8, right: 8, width: 30, height: 30, borderRadius: "50%", background: "rgba(0,0,0,0.6)", border: "none", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Trash2 size={14} />
-              </button>
-            </div>
-          ) : (
-            <div
-              onDragOver={e => { e.preventDefault(); setIsBannerDragging(true); }}
-              onDragLeave={() => setIsBannerDragging(false)}
-              onDrop={e => { e.preventDefault(); setIsBannerDragging(false); const f = e.dataTransfer.files?.[0]; if (f) processBannerFile(f); }}
-              onClick={() => bannerInputRef.current?.click()}
-              style={{
-                border: `2px dashed ${isBannerDragging ? "#f59e0b" : "var(--border)"}`,
-                borderRadius: 10, padding: "20px", textAlign: "center", cursor: "pointer",
-                background: isBannerDragging ? "#f59e0b0d" : "var(--bg-card-hover)", transition: "all 0.2s",
-                aspectRatio: "3 / 1", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6,
-              }}
-            >
-              <ImagePlus size={22} color={isBannerDragging ? "#f59e0b" : "var(--text-secondary)"} />
-              <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: 0 }}>Drop banner or click to browse</p>
-              <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}>Recommended: 1200 × 400 px · JPG, PNG, WebP · Max 4MB</p>
-              <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}>Hero size: full-width, height clamp(120px, 18vw, 200px)</p>
-            </div>
-          )}
-          <input ref={bannerInputRef} type="file" accept="image/*" onChange={e => { const f = e.target.files?.[0]; if (f) processBannerFile(f); }} style={{ display: "none" }} />
-          {bannerError && <p style={{ fontSize: 12, color: "var(--red)", marginTop: 6 }}>{bannerError}</p>}
         </Section>
 
         {/* ── Resolution Source ── */}

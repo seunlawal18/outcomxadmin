@@ -302,14 +302,11 @@ export default function ManageMarketsPage() {
   const [editTitle, setEditTitle]         = useState("");
   const [editCategory, setEditCategory]   = useState<MarketCategory>("sports");
   const [editImage, setEditImage]         = useState<string>("");
-  const [editBanner, setEditBanner]       = useState<string>("");
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
   const [statusFilter, setStatusFilter]   = useState<"all"|"open"|"closed"|"settled">("all");
   const [actionError, setActionError]     = useState<string>("");
   const [refreshing, setRefreshing]       = useState(false);
   const fileInputRef   = useRef<HTMLInputElement>(null);
-  const bannerInputRef = useRef<HTMLInputElement>(null);
-  const [isBannerDragging, setIsBannerDragging] = useState(false);
 
   useEffect(() => { handleRefresh(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
 
@@ -324,12 +321,11 @@ export default function ManageMarketsPage() {
     setEditTitle(m.title);
     setEditCategory(m.category);
     setEditImage(m.image || "");
-    setEditBanner(m.banner || "");
   };
 
   const saveEdit = async () => {
     if (!editingId) return;
-    const res = await updateMarket(editingId, { title: editTitle, category: editCategory, image: editImage || undefined, banner: editBanner || undefined });
+    const res = await updateMarket(editingId, { title: editTitle, category: editCategory, image: editImage || undefined });
     if (res.ok) { setEditingId(null); toast("Market updated"); }
     else toast(res.error, "error");
   };
@@ -382,14 +378,6 @@ export default function ManageMarketsPage() {
     if (file.size > 2 * 1024 * 1024) return;
     const reader = new FileReader();
     reader.onload = e => setEditImage(e.target?.result as string);
-    reader.readAsDataURL(file);
-  };
-
-  const handleBannerFile = (file: File) => {
-    if (!file.type.startsWith("image/")) return;
-    if (file.size > 4 * 1024 * 1024) return;
-    const reader = new FileReader();
-    reader.onload = e => setEditBanner(e.target?.result as string);
     reader.readAsDataURL(file);
   };
 
@@ -474,37 +462,6 @@ export default function ManageMarketsPage() {
                     <ImagePlus size={14} /> {editImage ? "Change image" : "Upload image"}
                   </button>
                   <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => { const f = e.target.files?.[0]; if (f) handleImageFile(f); }} />
-                </div>
-
-                {/* Banner upload — hero slideshow background */}
-                <div>
-                  <p style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.4px", margin: "0 0 8px" }}>
-                    Hero Banner <span style={{ fontWeight: 400, textTransform: "none", color: "var(--text-muted)" }}>(slide background · 1200×400px rec.)</span>
-                  </p>
-                  {editBanner ? (
-                    <div style={{ position: "relative" }}>
-                      <div style={{ width: "100%", height: 90, borderRadius: 8, overflow: "hidden", border: "1px solid var(--border)", position: "relative" }}>
-                        <img src={editBanner} alt="banner" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg,rgba(0,0,0,0.45) 0%,transparent 70%)" }} />
-                        <span style={{ position: "absolute", bottom: 6, left: 10, fontSize: 9, color: "rgba(255,255,255,0.7)", fontWeight: 700, letterSpacing: "0.5px" }}>HERO PREVIEW</span>
-                      </div>
-                      <button onClick={() => setEditBanner("")} style={{ position: "absolute", top: 6, right: 6, width: 22, height: 22, borderRadius: "50%", background: "rgba(0,0,0,0.6)", border: "none", color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <X size={11} />
-                      </button>
-                    </div>
-                  ) : (
-                    <div
-                      onDragOver={e => { e.preventDefault(); setIsBannerDragging(true); }}
-                      onDragLeave={() => setIsBannerDragging(false)}
-                      onDrop={e => { e.preventDefault(); setIsBannerDragging(false); const f = e.dataTransfer.files?.[0]; if (f) handleBannerFile(f); }}
-                      onClick={() => bannerInputRef.current?.click()}
-                      style={{ border: `2px dashed ${isBannerDragging ? "#f59e0b" : "var(--border)"}`, borderRadius: 8, padding: "14px", textAlign: "center", cursor: "pointer", background: isBannerDragging ? "#f59e0b0d" : "var(--bg-card-hover)" }}
-                    >
-                      <p style={{ fontSize: 12, color: "var(--text-secondary)", margin: 0 }}>Drop banner or click · 1200×400px · max 4MB</p>
-                      <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "3px 0 0" }}>Hero height: clamp(120px, 18vw, 200px) — full width</p>
-                    </div>
-                  )}
-                  <input ref={bannerInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => { const f = e.target.files?.[0]; if (f) handleBannerFile(f); }} />
                 </div>
 
                 {/* Category */}
