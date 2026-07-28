@@ -42,6 +42,7 @@ function toMarket(m: ApiMarket): Market {
     heroSub:          m.heroSub ?? null,
     heroAccent:       m.heroAccent ?? null,
     heroBanner:       m.heroBanner ?? null,
+    heroHref:         m.heroHref ?? null,
   };
 }
 
@@ -71,7 +72,7 @@ interface AdminState {
   }) => Promise<Result>;
   deleteMarket: (id: number) => Promise<Result>;
   toggleMarketStatus: (id: number) => Promise<Result>;
-  featureMarket: (id: number, featured: boolean, featuredOrder?: number, heroTag?: string, heroSub?: string, heroAccent?: string, heroBanner?: string) => Promise<Result>;
+  featureMarket: (id: number, featured: boolean, featuredOrder?: number, heroTag?: string, heroSub?: string, heroAccent?: string, heroBanner?: string, heroHref?: string) => Promise<Result>;
   resolveMarket: (id: number, result: string | Record<string, "Yes" | "No">) => Promise<
     { ok: true; settlement: SettlementBreakdown } | { ok: false; error: string }
   >;
@@ -168,8 +169,8 @@ export const useStore = create<AdminState>()(
         return { ok: true };
       },
 
-      featureMarket: async (id, featured, featuredOrder, heroTag, heroSub, heroAccent, heroBanner) => {
-        const res = await apiAdminFeatureMarket(id, featured, featuredOrder, heroTag, heroSub, heroAccent, heroBanner);
+      featureMarket: async (id, featured, featuredOrder, heroTag, heroSub, heroAccent, heroBanner, heroHref) => {
+        const res = await apiAdminFeatureMarket(id, featured, featuredOrder, heroTag, heroSub, heroAccent, heroBanner, heroHref);
         if (!res.ok || !res.data) return { ok: false, error: res.error ?? "Failed to update feature status." };
         set((state) => ({ markets: state.markets.map((m) => m.id === id ? toMarket(res.data!) : m) }));
         return { ok: true };

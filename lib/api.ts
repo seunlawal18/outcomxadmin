@@ -136,10 +136,11 @@ export async function apiAdminFeatureMarket(
   heroSub?: string,
   heroAccent?: string,
   heroBanner?: string,
+  heroHref?: string,
 ) {
   return apiFetch<ApiMarket>(`/api/admin/markets/${id}/feature`, {
     method: "PATCH",
-    body: JSON.stringify({ featured, featuredOrder, heroTag, heroSub, heroAccent, heroBanner }),
+    body: JSON.stringify({ featured, featuredOrder, heroTag, heroSub, heroAccent, heroBanner, heroHref }),
   });
 }
 
@@ -302,6 +303,7 @@ export interface ApiMarket {
   heroSub?: string | null;
   heroAccent?: string | null;
   heroBanner?: string | null;
+  heroHref?: string | null;
 }
 
 export interface SettlementBreakdown {

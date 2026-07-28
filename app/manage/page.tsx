@@ -101,7 +101,7 @@ function HeroSlideshowEditor({
 }: {
   market: Market;
   allMarkets: Market[];
-  onSave: (featured: boolean, order: number, tag: string, sub: string, accent: string, heroBanner: string) => Promise<void>;
+  onSave: (featured: boolean, order: number, tag: string, sub: string, accent: string, heroBanner: string, heroHref: string) => Promise<void>;
 }) {
   const [featured,       setFeatured]       = useState(market.featured ?? false);
   const [order,          setOrder]          = useState(market.featuredOrder ?? 1);
@@ -109,6 +109,7 @@ function HeroSlideshowEditor({
   const [sub,            setSub]            = useState(market.heroSub ?? "");
   const [accent,         setAccent]         = useState(market.heroAccent ?? "#10b981");
   const [heroBanner,     setHeroBanner]     = useState(market.heroBanner ?? "");
+  const [heroHref,       setHeroHref]       = useState(market.heroHref ?? "");
   const [saving,         setSaving]         = useState(false);
   const [bannerDragging, setBannerDragging] = useState(false);
   const colorRef       = useRef<HTMLInputElement>(null);
@@ -131,7 +132,7 @@ function HeroSlideshowEditor({
       }
     }
     setSaving(true);
-    await onSave(featured, order, tag, sub, accent, heroBanner);
+    await onSave(featured, order, tag, sub, accent, heroBanner, heroHref);
     setSaving(false);
   };
 
@@ -259,6 +260,19 @@ function HeroSlideshowEditor({
                 maxLength={100} style={{ fontSize: 13, width: "100%" }} />
             </div>
 
+            {/* Destination URL */}
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.4px", display: "block", marginBottom: 6 }}>
+                Hero Destination URL <span style={{ fontWeight: 400, textTransform: "none" }}>(optional)</span>
+              </label>
+              <input className="input-dark" value={heroHref} onChange={e => setHeroHref(e.target.value)}
+                placeholder="e.g. / or /?category=sports or /market/42"
+                maxLength={200} style={{ fontSize: 13, width: "100%" }} />
+              <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "5px 0 0" }}>
+                Leave blank to default to this market's own page. Use <code style={{ background: "var(--bg-card-hover)", padding: "1px 4px", borderRadius: 3 }}>/?category=sports</code> to send users to a filtered view.
+              </p>
+            </div>
+
             {/* Accent color */}
             <div>
               <label style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.4px", display: "block", marginBottom: 6 }}>
@@ -351,7 +365,7 @@ export default function ManageMarketsPage() {
     setRefreshing(false);
   };
 
-  const handleFeatureSave = async (market: Market, featured: boolean, order: number, tag: string, sub: string, accent: string, heroBanner: string) => {
+  const handleFeatureSave = async (market: Market, featured: boolean, order: number, tag: string, sub: string, accent: string, heroBanner: string, heroHref: string) => {
     const res = await featureMarket(
       market.id, featured,
       featured ? order : undefined,
@@ -359,6 +373,7 @@ export default function ManageMarketsPage() {
       sub || undefined,
       accent || undefined,
       heroBanner || undefined,
+      heroHref || undefined,
     );
     if (res.ok) {
       toast(featured ? `⭐ Slot ${order} set — hero updated` : "Removed from hero slideshow");
@@ -477,7 +492,7 @@ export default function ManageMarketsPage() {
                 <HeroSlideshowEditor
                   market={m}
                   allMarkets={markets}
-                  onSave={(featured, order, tag, sub, accent, heroBanner) => handleFeatureSave(m, featured, order, tag, sub, accent, heroBanner)}
+                  onSave={(featured, order, tag, sub, accent, heroBanner, heroHref) => handleFeatureSave(m, featured, order, tag, sub, accent, heroBanner, heroHref)}
                 />
 
                 <div style={{ display: "flex", gap: 8 }}>
