@@ -396,11 +396,12 @@ export default function ManageMarketsPage() {
   };
 
   const handleImageFile = (file: File) => {
-    if (!file.type.startsWith("image/")) return;
-    if (file.size > 2 * 1024 * 1024) return;
+    if (!file.type.startsWith("image/")) { toast("Please upload an image file", "error"); return; }
+    if (file.size > 4 * 1024 * 1024) { toast("Image must be under 4MB", "error"); return; }
     const reader = new FileReader();
     reader.onload = e => setEditImage(e.target?.result as string);
     reader.readAsDataURL(file);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const categories: MarketCategory[] = ["sports","crypto","politics","finance","esports","entertainment","economy"];
@@ -483,6 +484,7 @@ export default function ManageMarketsPage() {
                   <button onClick={() => fileInputRef.current?.click()} style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 14px", borderRadius: 8, background: "var(--bg-card-hover)", border: "1px dashed var(--border)", color: "var(--text-secondary)", fontSize: 13, cursor: "pointer" }}>
                     <ImagePlus size={14} /> {editImage ? "Change image" : "Upload image"}
                   </button>
+                  <span style={{ fontSize: 11, color: "var(--text-muted)", alignSelf: "center" }}>Square · 56×56px · max 4MB</span>
                   <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => { const f = e.target.files?.[0]; if (f) handleImageFile(f); }} />
                 </div>
 

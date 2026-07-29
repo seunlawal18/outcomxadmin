@@ -253,7 +253,7 @@ export default function CreateMarketPage() {
               style={{ border: `2px dashed ${isDragging ? "var(--emerald)" : "var(--border)"}`, borderRadius: 10, padding: "20px", textAlign: "center", cursor: "pointer", background: isDragging ? "var(--emerald-bg)" : "var(--bg-card-hover)", transition: "all 0.2s" }}
             >
               <ImagePlus size={20} color="var(--text-secondary)" style={{ margin: "0 auto 8px", display: "block" }} />
-              <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: 0 }}>Drop image or click to browse · JPG, PNG, WebP · Max 2MB</p>
+              <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: 0 }}>Drop image or click to browse · Square · 56×56px on cards · Max 2MB</p>
             </div>
           )}
           <input ref={fileInputRef} type="file" accept="image/*" onChange={e => { const f = e.target.files?.[0]; if (f) processImageFile(f); }} style={{ display: "none" }} />
