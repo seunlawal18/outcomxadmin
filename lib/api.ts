@@ -128,6 +128,13 @@ export async function apiAdminToggleMarket(id: number) {
   return apiFetch<ApiMarket>(`/api/admin/markets/${id}/toggle`, { method: "PATCH" });
 }
 
+export async function apiAdminSetTrending(id: number, trending: boolean, trendingOrder: number) {
+  return apiFetch<ApiMarket>(`/api/admin/markets/${id}/trending`, {
+    method: "PATCH",
+    body: JSON.stringify({ trending, trendingOrder }),
+  });
+}
+
 export async function apiAdminFeatureMarket(
   id: number,
   featured: boolean,
@@ -291,6 +298,7 @@ export interface ApiMarket {
   platformFee: number | null;
   prizePool: number | null;
   trending: boolean;
+  trendingOrder?: number | null;
   priceAssetId: string | null;
   priceAssetSymbol: string | null;
   openingPrice: number | null;

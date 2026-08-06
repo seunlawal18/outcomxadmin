@@ -7,6 +7,7 @@ import {
   apiAdminDeleteMarket, apiAdminToggleMarket, apiAdminResolveMarket,
   apiAdminFeatureMarket, apiAdminGetFeaturedMarkets,
   apiAdminGetPromoSlides, apiAdminCreatePromoSlide, apiAdminUpdatePromoSlide, apiAdminDeletePromoSlide,
+  apiAdminSetTrending,
   ApiMarket, ApiPromoSlide, SettlementBreakdown,
 } from "./api";
 
@@ -26,6 +27,7 @@ function toMarket(m: ApiMarket): Market {
     createdAt:        m.createdAt,
     probabilities:    m.probabilities,
     trending:         m.trending,
+    trendingOrder:    m.trendingOrder ?? null,
     duration:         m.duration as MarketDuration,
     expiresAt:        m.expiresAt,
     image:            m.image ?? undefined,
@@ -72,6 +74,7 @@ interface AdminState {
   }) => Promise<Result>;
   deleteMarket: (id: number) => Promise<Result>;
   toggleMarketStatus: (id: number) => Promise<Result>;
+  setTrending: (id: number, trending: boolean, trendingOrder: number) => Promise<Result>;
   featureMarket: (id: number, featured: boolean, featuredOrder?: number, heroTag?: string, heroSub?: string, heroAccent?: string, heroBanner?: string, heroHref?: string) => Promise<Result>;
   resolveMarket: (id: number, result: string | Record<string, "Yes" | "No">) => Promise<
     { ok: true; settlement: SettlementBreakdown } | { ok: false; error: string }
@@ -171,6 +174,13 @@ export const useStore = create<AdminState>()(
       toggleMarketStatus: async (id) => {
         const res = await apiAdminToggleMarket(id);
         if (!res.ok || !res.data) return { ok: false, error: res.error ?? "Failed to toggle market status." };
+        set((state) => ({ markets: state.markets.map((m) => m.id === id ? toMarket(res.data!) : m) }));
+        return { ok: true };
+      },
+
+      setTrending: async (id, trending, trendingOrder) => {
+        const res = await apiAdminSetTrending(id, trending, trendingOrder);
+        if (!res.ok || !res.data) return { ok: false, error: res.error ?? "Failed to update trending." };
         set((state) => ({ markets: state.markets.map((m) => m.id === id ? toMarket(res.data!) : m) }));
         return { ok: true };
       },

@@ -5,10 +5,62 @@ import { Market, MarketCategory, DURATION_LABELS } from "@/lib/types";
 import {
   Pencil, Trash2, Power, PowerOff, Search, X, Save,
   ListFilter, Clock, CheckCircle2, XCircle, ImagePlus,
-  RefreshCw, AlertCircle, Star, Clapperboard,
+  RefreshCw, AlertCircle, Star, Clapperboard, Flame,
 } from "lucide-react";
 import Countdown from "@/components/Countdown";
 import { toast } from "@/lib/toastStore";
+
+// ─────────────────────────────────────────────────────────────────
+// Trending Spotlight Panel
+// ─────────────────────────────────────────────────────────────────
+function TrendingSpotlightPanel({
+  markets,
+  onRemove,
+}: {
+  markets: Market[];
+  onRemove: (m: Market) => void;
+}) {
+  const trending = markets
+    .filter(m => m.trending)
+    .sort((a, b) => (a.trendingOrder ?? 99) - (b.trendingOrder ?? 99));
+  const maxSlot = Math.max(5, ...trending.map(m => m.trendingOrder ?? 0)) + 2;
+  const slots = Array.from({ length: maxSlot }, (_, i) => i + 1);
+
+  return (
+    <div className="card" style={{ marginBottom: 20, padding: 0, overflow: "hidden" }}>
+      <div style={{ padding: "12px 18px", background: "linear-gradient(135deg, #ef444418, #ef444408)", borderBottom: "1px solid #ef444433", display: "flex", alignItems: "center", gap: 8 }}>
+        <Flame size={15} color="#ef4444" />
+        <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>Trending Spotlight</span>
+        <span style={{ fontSize: 11, color: "var(--text-muted)", marginLeft: 2 }}>
+          {trending.length} active · {maxSlot - trending.length} available
+        </span>
+      </div>
+      <div style={{ padding: "12px 18px", display: "flex", flexDirection: "column", gap: 6 }}>
+        {slots.map(slot => {
+          const m = trending.find(t => t.trendingOrder === slot);
+          return (
+            <div key={slot} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 8, background: m ? "#ef44440a" : "var(--bg-card-hover)", border: `1px solid ${m ? "#ef444433" : "var(--border)"}` }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: m ? "#ef4444" : "var(--text-muted)", minWidth: 20 }}>#{slot}</span>
+              {m ? (
+                <>
+                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: m.status === "open" ? "#10b981" : "#6b7280", flexShrink: 0 }} />
+                  <span style={{ fontSize: 12, color: "var(--text-primary)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.title}</span>
+                  <span style={{ fontSize: 11, color: "var(--text-muted)", flexShrink: 0 }}>${(m.volume / 1000).toFixed(0)}K Vol</span>
+                  <button onClick={() => onRemove(m)}
+                    style={{ fontSize: 11, fontWeight: 600, color: "var(--red)", background: "none", border: "none", cursor: "pointer", padding: "2px 6px", borderRadius: 4, flexShrink: 0 }}
+                    onMouseEnter={e => (e.currentTarget.style.background = "var(--red-bg)")}
+                    onMouseLeave={e => (e.currentTarget.style.background = "none")}>Remove</button>
+                </>
+              ) : (
+                <span style={{ fontSize: 12, color: "var(--text-muted)", flex: 1 }}>— available —</span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 // ─────────────────────────────────────────────────────────────────
 // Featured Slots Summary Panel
@@ -317,7 +369,7 @@ function HeroSlideshowEditor({
 // Main Page
 // ─────────────────────────────────────────────────────────────────
 export default function ManageMarketsPage() {
-  const { markets, updateMarket, deleteMarket, toggleMarketStatus, fetchMarkets, featureMarket } = useStore();
+  const { markets, updateMarket, deleteMarket, toggleMarketStatus, fetchMarkets, featureMarket, setTrending } = useStore();
   const [search, setSearch]               = useState("");
   const [editingId, setEditingId]         = useState<number | null>(null);
   const [editTitle, setEditTitle]         = useState("");
@@ -327,6 +379,8 @@ export default function ManageMarketsPage() {
   const [statusFilter, setStatusFilter]   = useState<"all"|"open"|"closed"|"settled">("all");
   const [actionError, setActionError]     = useState<string>("");
   const [refreshing, setRefreshing]       = useState(false);
+  const [trendingEditId, setTrendingEditId] = useState<number | null>(null);
+  const [trendingOrderInput, setTrendingOrderInput] = useState(1);
   const fileInputRef   = useRef<HTMLInputElement>(null);
 
   useEffect(() => { handleRefresh(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
@@ -395,6 +449,18 @@ export default function ManageMarketsPage() {
     else toast(res.error, "error");
   };
 
+  const handleSetTrending = async (m: Market, order: number) => {
+    const res = await setTrending(m.id, true, order);
+    if (res.ok) { toast(`🔥 #${order} trending set`); setTrendingEditId(null); }
+    else toast(res.error, "error");
+  };
+
+  const handleRemoveTrending = async (m: Market) => {
+    const res = await setTrending(m.id, false, 0);
+    if (res.ok) toast("Removed from trending");
+    else toast(res.error, "error");
+  };
+
   const handleImageFile = (file: File) => {
     if (!file.type.startsWith("image/")) { toast("Please upload an image file", "error"); return; }
     if (file.size > 4 * 1024 * 1024) { toast("Image must be under 4MB", "error"); return; }
@@ -446,6 +512,12 @@ export default function ManageMarketsPage() {
         </div>
       )}
 
+      {/* ── Trending Spotlight Panel ── */}
+      <TrendingSpotlightPanel
+        markets={markets}
+        onRemove={handleRemoveTrending}
+      />
+
       {/* ── Featured Slots Panel ── */}
       <FeaturedSlotsPanel
         markets={markets}
@@ -455,8 +527,8 @@ export default function ManageMarketsPage() {
 
       {/* ── Markets table ── */}
       <div className="card" style={{ overflow: "hidden", padding: 0 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 90px 70px 80px 100px 140px", padding: "11px 18px", borderBottom: "1px solid var(--border)", background: "var(--bg-primary)" }}>
-          {["Market", "Category", "Type", "Duration", "Status", "Actions"].map(h => (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 90px 70px 80px 100px 80px 140px", padding: "11px 18px", borderBottom: "1px solid var(--border)", background: "var(--bg-primary)" }}>
+          {["Market", "Category", "Type", "Duration", "Status", "🔥", "Actions"].map(h => (
             <span key={h} style={{ fontSize: 11, color: "var(--text-secondary)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.4px" }}>{h}</span>
           ))}
         </div>
@@ -516,7 +588,7 @@ export default function ManageMarketsPage() {
             ) : (
               /* ── Normal row ── */
               <div
-                style={{ display: "grid", gridTemplateColumns: "1fr 90px 70px 80px 100px 140px", padding: "12px 18px", borderBottom: "1px solid var(--border)", alignItems: "center", transition: "background 0.15s" }}
+                style={{ display: "grid", gridTemplateColumns: "1fr 90px 70px 80px 100px 80px 140px", padding: "12px 18px", borderBottom: "1px solid var(--border)", alignItems: "center", transition: "background 0.15s" }}
                 onMouseEnter={e => (e.currentTarget.style.background = "var(--bg-card-hover)")}
                 onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
               >
@@ -559,7 +631,54 @@ export default function ManageMarketsPage() {
                   {m.status}
                 </span>
 
-                {/* Actions */}
+                {/* Trending cell */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  {trendingEditId === m.id ? (
+                    /* Inline order picker */
+                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      <div style={{ display: "flex", gap: 4 }}>
+                        {[1,2,3,4,5].map(n => {
+                          const taken = markets.find(x => x.id !== m.id && x.trending && x.trendingOrder === n);
+                          const sel = trendingOrderInput === n;
+                          return (
+                            <button key={n} onClick={() => setTrendingOrderInput(n)}
+                              title={taken ? `Taken by ${taken.title.slice(0,20)}` : `Slot ${n}`}
+                              style={{ width: 24, height: 24, borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", border: `1px solid ${sel ? "#ef4444" : "var(--border)"}`, background: sel ? "#ef4444" : "var(--bg-card-hover)", color: sel ? "#fff" : taken ? "var(--text-muted)" : "var(--text-secondary)" }}>
+                              {n}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <div style={{ display: "flex", gap: 4 }}>
+                        <button onClick={() => handleSetTrending(m, trendingOrderInput)}
+                          style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 5, background: "#ef4444", border: "none", color: "#fff", cursor: "pointer" }}>
+                          Set
+                        </button>
+                        {m.trending && (
+                          <button onClick={() => { handleRemoveTrending(m); setTrendingEditId(null); }}
+                            style={{ fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 5, background: "var(--bg-card-hover)", border: "1px solid var(--border)", color: "var(--text-secondary)", cursor: "pointer" }}>
+                            Remove
+                          </button>
+                        )}
+                        <button onClick={() => setTrendingEditId(null)}
+                          style={{ fontSize: 10, padding: "2px 5px", borderRadius: 5, background: "none", border: "none", color: "var(--text-muted)", cursor: "pointer" }}>
+                          ×
+                        </button>
+                      </div>
+                    </div>
+                  ) : m.trending ? (
+                    <button onClick={() => { setTrendingEditId(m.id); setTrendingOrderInput(m.trendingOrder ?? 1); }}
+                      style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "2px 7px", borderRadius: 20, background: "#ef44440d", border: "1px solid #ef444433", fontSize: 11, fontWeight: 700, color: "#ef4444", cursor: "pointer" }}>
+                      <Flame size={10} fill="#ef4444" />
+                      {m.trendingOrder}
+                    </button>
+                  ) : (
+                    <button onClick={() => { setTrendingEditId(m.id); setTrendingOrderInput(1); }}
+                      style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 20, background: "var(--bg-card-hover)", border: "1px solid var(--border)", color: "var(--text-muted)", cursor: "pointer" }}>
+                      + Trend
+                    </button>
+                  )}
+                </div>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                   <button onClick={() => startEdit(m)} title="Edit"
                     style={{ width: 30, height: 30, borderRadius: 7, background: "var(--bg-card-hover)", border: "1px solid var(--border)", color: "var(--text-secondary)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}

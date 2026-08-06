@@ -33,6 +33,7 @@ export interface Market {
   createdAt: string;
   probabilities: Record<string, number>;
   trending?: boolean;
+  trendingOrder?: number | null;
   duration: MarketDuration;
   expiresAt: string;
   image?: string;
